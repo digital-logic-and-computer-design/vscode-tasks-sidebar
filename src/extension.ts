@@ -3,7 +3,8 @@ import { VscodeTasksProvider } from './vscode-tasks-sidebar/vscodeTasksProvider'
 
 // find-unused-exports:ignore-next-line-exports
 export function activate(context: vscode.ExtensionContext) {
-  const vscodeTasksProvider = new VscodeTasksProvider();
+  const outputChannel = vscode.window.createOutputChannel('VSCode Tasks Sidebar');
+  const vscodeTasksProvider = new VscodeTasksProvider(outputChannel);
   vscode.window.registerTreeDataProvider(
     'vscodeTasksSidebar',
     vscodeTasksProvider
@@ -21,7 +22,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   disposable = vscode.commands.registerCommand(
     'vscodeTasksSidebar.refresh',
-    () => vscodeTasksProvider.refresh()
+    () => {
+      outputChannel.appendLine('Manual refresh requested');
+      vscodeTasksProvider.refresh();
+    }
   );
   context.subscriptions.push(disposable);
 
@@ -50,15 +54,29 @@ export function activate(context: vscode.ExtensionContext) {
     '**/.vscode/tasks.json'
   );
   context.subscriptions.push(tasksJsonWatcher);
+  // Debounced refresh to coalesce rapid file events
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleRefresh = () => {
+    outputChannel.appendLine('Scheduling tasks refresh in 200ms');
+    if (refreshTimer !== undefined) {
+      clearTimeout(refreshTimer);
+    }
+    refreshTimer = setTimeout(() => {
+      outputChannel.appendLine('Auto-refreshing tasks after tasks.json change');
+      vscodeTasksProvider.refresh();
+      refreshTimer = undefined;
+    }, 200);
+  };
 
   context.subscriptions.push(
-    tasksJsonWatcher.onDidCreate(() => vscodeTasksProvider.refresh())
+    tasksJsonWatcher.onDidCreate(() => scheduleRefresh())
   );
   context.subscriptions.push(
-    tasksJsonWatcher.onDidChange(() => vscodeTasksProvider.refresh())
+    tasksJsonWatcher.onDidChange(() => scheduleRefresh())
   );
+
   context.subscriptions.push(
-    tasksJsonWatcher.onDidDelete(() => vscodeTasksProvider.refresh())
+    tasksJsonWatcher.onDidDelete(() => scheduleRefresh())
   );
 
   vscode.tasks.onDidStartTask((e) => {

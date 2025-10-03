@@ -9,13 +9,15 @@ export class VscodeTasksProvider
   private isGrouped: boolean = isResultGrouped();
   private cacheTasksList: VscodeTask[] | undefined;
   private cacheTasksGrouped: VscodeGroup[] | undefined;
+  private outputChannel: vscode.OutputChannel | undefined;
 
   private _onDidChangeTreeData: vscode.EventEmitter<VscodeTask | undefined> =
     new vscode.EventEmitter<VscodeTask | undefined>();
   public readonly onDidChangeTreeData: vscode.Event<VscodeTask | undefined> =
     this._onDidChangeTreeData.event;
 
-  constructor() {
+  constructor(outputChannel?: vscode.OutputChannel) {
+    this.outputChannel = outputChannel;
     this.refresh();
   }
 
@@ -29,6 +31,14 @@ export class VscodeTasksProvider
 
       const cacheTasks: VscodeTask[] = [];
       for (const task of tasks) {
+        // If the task name starts with an underscore, don't show it
+        if (task.name.startsWith('_')) {
+          this.outputChannel?.appendLine(`Hiding task: ${task.name}`);
+          continue;
+        } else {
+          this.outputChannel?.appendLine(`Showing task: ${task.name}`);
+        }
+
         cacheTasks.push(new VscodeTask(task));
       }
       sortTasksByTypeLabel(cacheTasks);
@@ -64,6 +74,13 @@ export class VscodeTasksProvider
     }
 
     this.updateTree();
+    const tasksCount = Array.isArray(this.cacheTasksList)
+      ? this.cacheTasksList.length
+      : 0;
+  const groupsCount = new Set((this.cacheTasksList ?? []).map((t) => t.type)).size;
+    this.outputChannel?.appendLine(
+      `Refresh complete: ${tasksCount} tasks loaded, ${groupsCount} groups.`
+    );
   }
 
   public updateTree() {

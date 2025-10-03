@@ -19,7 +19,8 @@
     {
       "label": "🏃‍♂️ Run demo",
       "command": "npm",
-      "args": ["start"]
+      "args": ["start"],
+      "hide": true
     },
     {
       "label": "makefile-build",
