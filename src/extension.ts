@@ -45,6 +45,22 @@ export function activate(context: vscode.ExtensionContext) {
 
   setIsGroupedContext(false);
 
+  // Auto-refresh when workspace tasks.json changes (.vscode/tasks.json)
+  const tasksJsonWatcher = vscode.workspace.createFileSystemWatcher(
+    '**/.vscode/tasks.json'
+  );
+  context.subscriptions.push(tasksJsonWatcher);
+
+  context.subscriptions.push(
+    tasksJsonWatcher.onDidCreate(() => vscodeTasksProvider.refresh())
+  );
+  context.subscriptions.push(
+    tasksJsonWatcher.onDidChange(() => vscodeTasksProvider.refresh())
+  );
+  context.subscriptions.push(
+    tasksJsonWatcher.onDidDelete(() => vscodeTasksProvider.refresh())
+  );
+
   vscode.tasks.onDidStartTask((e) => {
     const vscodeTask = vscodeTasksProvider.findVscodeTask(e.execution.task);
     if (vscodeTask) {

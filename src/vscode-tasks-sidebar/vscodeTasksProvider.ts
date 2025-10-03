@@ -131,8 +131,8 @@ export class VscodeTasksProvider
 
   resolveTreeItem?(
     item: vscode.TreeItem,
-    element: VscodeTask,
-    token: vscode.CancellationToken
+    _element: VscodeTask,
+    _token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.TreeItem> {
     return item;
   }
